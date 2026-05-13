@@ -1,26 +1,66 @@
-name: Android CI
+name: Build Debug APK
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [ main, master ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+      - name: Show repo files
+        run: |
+          ls -la
+          find . -maxdepth 3 -type f | sort
+
+      - name: Unzip project if needed
+        run: |
+          if [ -f yugioh-preorder-watcher.zip ]; then
+            unzip -o yugioh-preorder-watcher.zip
+          fi
+
+          echo "After unzip:"
+          ls -la
+          find . -maxdepth 4 -type f | sort
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build APK
+        run: |
+          if [ -f settings.gradle ]; then
+            gradle assembleDebug
+          elif [ -f yugioh-preorder-watcher/settings.gradle ]; then
+            cd yugioh-preorder-watcher
+            gradle assembleDebug
+          else
+            echo "ERRORE: settings.gradle non trovato."
+            echo "File presenti:"
+            find . -maxdepth 4 -type f | sort
+            exit 1
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: YuGiOhPreorderWatcher-debug-apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            yugioh-preorder-watcher/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
