@@ -1,4 +1,3 @@
-
 name: Build Debug APK
 
 on:
@@ -20,11 +19,9 @@ jobs:
           ls -la
           find . -maxdepth 4 -type f | sort
 
-      - name: Unzip project if uploaded as zip
+      - name: Unzip project
         run: |
-          if [ -f yugioh-preorder-watcher.zip ]; then
-            unzip -o yugioh-preorder-watcher.zip
-          fi
+          unzip -o yugioh-preorder-watcher.zip
 
           echo "Files after unzip:"
           ls -la
@@ -43,6 +40,24 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+
+      - name: Ensure AndroidX is enabled
+        run: |
+          echo "android.useAndroidX=true" > gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> gradle.properties
+
+          if [ -d yugioh-preorder-watcher ]; then
+            cp gradle.properties yugioh-preorder-watcher/gradle.properties
+          fi
+
+          echo "Root gradle.properties:"
+          cat gradle.properties
+
+          if [ -f yugioh-preorder-watcher/gradle.properties ]; then
+            echo "Subfolder gradle.properties:"
+            cat yugioh-preorder-watcher/gradle.properties
+          fi
 
       - name: Build APK
         run: |
